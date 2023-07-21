@@ -1,5 +1,7 @@
 ﻿using Dapper;
 using DataLayer.Models;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -12,10 +14,12 @@ namespace DataLayer.Repositories
     public class CoinStatsRepository
     {
         private readonly IDbConnection dbConnection;
+        private readonly IMemoryCache memoryCache;
 
-        public CoinStatsRepository(IDbConnection dbConnection)
+        public CoinStatsRepository(IDbConnection dbConnection, IMemoryCache memoryCache)
         {
             this.dbConnection = dbConnection;
+            this.memoryCache = memoryCache;
         }
 
         public void SaveCoinStats(CoinStats coinStats)
@@ -23,12 +27,25 @@ namespace DataLayer.Repositories
             const string sql = @"INSERT INTO CoinStats (CoinName, Price, MarketCap) 
                                  VALUES (@CoinName, @Price, @MarketCap)";
             dbConnection.Execute(sql, coinStats);
+
+            memoryCache.Remove("CoinStatsData");
         }
 
         public CoinStats GetCachedCoinStats()
         {
-            const string sql = "SELECT TOP 1 * FROM CoinStats";
-            return dbConnection.QueryFirstOrDefault<CoinStats>(sql);
+            if (!memoryCache.TryGetValue("CoinStatsData", out CoinStats coinStatsData))
+            {
+                const string sql = "SELECT TOP 1 * FROM CoinStats";
+                coinStatsData = dbConnection.QueryFirstOrDefault<CoinStats>(sql);
+
+                if (coinStatsData != null)
+                {
+                    
+                    memoryCache.Set("CoinStatsData", coinStatsData, TimeSpan.FromHours(1));
+                }
+            }
+
+            return coinStatsData;
         }
     }
 }

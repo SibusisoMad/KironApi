@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class Navigation
+    public class UserRegistrationModel
     {
-        public int Id { get; set; }
-        public string NavText { get; set; }
-        public int ParentId { get; set; }
+        public User User { get; set; }
+        public string Password { get; set; }
     }
 }

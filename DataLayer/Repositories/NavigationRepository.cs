@@ -1,27 +1,36 @@
 ﻿using Dapper;
 using DataLayer.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataLayer.Repositories
 {
     public class NavigationRepository
     {
         private readonly IDbConnection dbConnection;
+        private readonly ILogger logger;
 
-        public NavigationRepository(IDbConnection dbConnection)
+        public NavigationRepository(IDbConnection dbConnection, ILogger<NavigationRepository> logger)
         {
             this.dbConnection = dbConnection;
+            this.logger = logger;
         }
 
         public IEnumerable<Navigation> GetAllNavigations()
         {
-            const string sql = "SELECT * FROM Navigation";
-            return dbConnection.Query<Navigation>(sql);
+            try
+            {
+                const string sql = "SELECT * FROM Navigation";
+                return dbConnection.Query<Navigation>(sql);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while retrieving navigation data");
+                throw;
+            }
         }
     }
 }

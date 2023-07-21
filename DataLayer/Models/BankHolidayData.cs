@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class Navigation
+    public class BankHolidayData
     {
-        public int Id { get; set; }
-        public string NavText { get; set; }
-        public int ParentId { get; set; }
+        public string Division { get; set; }
+        public string[] Events { get; set; }
     }
 }
