@@ -95,10 +95,5 @@ namespace DataLayer.Repositories
             }
         }
 
-        //public bool VerifyPassword(string inputPassword, string hashedPassword)
-        //{
-        //    string inputHash = HashPassword(inputPassword);
-        //    return inputHash.Equals(hashedPassword, StringComparison.OrdinalIgnoreCase);
-        //}
     }
 }
