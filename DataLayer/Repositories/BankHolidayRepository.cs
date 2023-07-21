@@ -34,11 +34,7 @@ namespace DataLayer.Repositories
 
         public async Task<IEnumerable<BankHoliday>> GetHolidaysWithRegions()
         {
-            const string sql = @"
-                SELECT * 
-                FROM Holidays h
-                LEFT JOIN HolidayRegion hr ON h.HolidayId = hr.HolidayId
-                LEFT JOIN Regions r ON hr.RegionId = r.RegionId";
+            const string sql = "spt_GetHolidaysWithRegions";
 
             var holidaysWithRegions = new Dictionary<int, BankHoliday>();
 
@@ -176,7 +172,7 @@ namespace DataLayer.Repositories
 
                     foreach (var bankHoliday in bankHolidays)
                     {
-                        var query = "INSERT INTO Holidays (Name, Date, Region) VALUES (@Name, @Date, @Region)";
+                        var query = "spt_SaveBankHolidays";
 
                         await connection.ExecuteAsync(query, new
                         {

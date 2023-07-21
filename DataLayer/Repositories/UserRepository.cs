@@ -26,11 +26,14 @@ namespace DataLayer.Repositories
         {
             try
             {
-
                 user.PasswordHash = HashPassword(password);
-                const string sql = @"INSERT INTO Users (Username, PasswordHash) 
-                                     VALUES (@Username, @PasswordHash)";
-                dbConnection.Execute(sql, user);
+                const string sql = "spt_CreateUser";
+                
+                var parameters = new DynamicParameters();
+                parameters.Add("@Username", user.Username);
+                parameters.Add("@PasswordHash", user.PasswordHash);
+
+                dbConnection.Execute(sql, parameters, commandType: CommandType.StoredProcedure);
                 return true;
             }
             catch (Exception ex)
@@ -40,11 +43,12 @@ namespace DataLayer.Repositories
             }
         }
 
+
         public async Task<User> GetUserByUsername(string username)
         {
             try
             {
-                const string sql = "SELECT * FROM Users WHERE Username = @Username";
+                const string sql = "spt_GetUserByUsername";
                 return await dbConnection.QuerySingleOrDefaultAsync<User>(sql, new { Username = username });
             }
             catch (Exception ex)
@@ -58,8 +62,12 @@ namespace DataLayer.Repositories
         {
             try
             {
-                const string sql = "SELECT PasswordHash FROM Users WHERE Username = @Username";
-                return await dbConnection.QuerySingleOrDefaultAsync<byte[]>(sql, new { Username = username });
+                const string sql = "spt_GetHashedPasswordByUsername";
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@Username", username);
+
+                return await dbConnection.QuerySingleOrDefaultAsync<byte[]>(sql, parameters, commandType: CommandType.StoredProcedure);
             }
             catch (Exception ex)
             {
@@ -67,6 +75,7 @@ namespace DataLayer.Repositories
                 throw;
             }
         }
+
 
         private byte[] HashPassword(string password)
         {
@@ -85,7 +94,7 @@ namespace DataLayer.Repositories
         {
             try
             {
-                const string sql = "SELECT PasswordHash FROM Users WHERE Username = @Username";
+                const string sql = "spt_GetHashedPasswordByUsername";
                 return await dbConnection.QuerySingleOrDefaultAsync<byte[]>(sql, new { Username = username });
             }
             catch (Exception ex)

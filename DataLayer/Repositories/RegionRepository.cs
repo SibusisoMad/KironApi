@@ -23,33 +23,34 @@ namespace DataLayer.Repositories
 
         public IEnumerable<Region> GetAllRegions()
         {
-            const string sql = "SELECT * FROM Regions";
-            return dbConnection.Query<Region>(sql);
+            const string sql = "spt_GetAllRegions";
+            return dbConnection.Query<Region>(sql, commandType: CommandType.StoredProcedure);
         }
 
         public Region GetRegionById(int id)
         {
-            const string sql = "SELECT * FROM Regions WHERE Id = @Id";
-            return dbConnection.QuerySingleOrDefault<Region>(sql, new { Id = id });
+            const string sql = "spt_GetRegionById";
+            var parameters = new { Id = id };
+            return dbConnection.QuerySingleOrDefault<Region>(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
         public Region GetRegionByName(string name)
         {
-            const string sql = "SELECT * FROM Regions WHERE Name = @Name";
-            return dbConnection.QuerySingleOrDefault<Region>(sql, new { Name = name });
+            const string sql = "spt_GetRegionByName";
+            var parameters = new { Name = name };
+            return dbConnection.QuerySingleOrDefault<Region>(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
         public void SaveRegion(Region region)
         {
-            const string sql = @"INSERT INTO Regions (Name) VALUES (@Name);
-                                 SELECT CAST(SCOPE_IDENTITY() as int)";
+            const string sql = "EXEC spt_InsertRegion @Name";
             int regionId = dbConnection.ExecuteScalar<int>(sql, region);
             region.Id = regionId;
         }
 
         public void UpdateRegion(Region region)
         {
-            const string sql = "UPDATE Regions SET Name = @Name WHERE Id = @Id";
+            const string sql = "EXEC spt_UpdateRegion @Id, @Name";
             dbConnection.Execute(sql, region);
         }
 
@@ -61,29 +62,30 @@ namespace DataLayer.Repositories
                 {
                     if (bankHolidays != null && bankHolidays.Any())
                     {
-                        const string holidaysSql = @"INSERT INTO Holidays (Name, Date, Region)
-                                                   VALUES (@Name, @Date, @Region)";
-                        dbConnection.Execute(holidaysSql, bankHolidays);
-                    }
+                        var region = dbConnection.QuerySingleOrDefault<Region>("spt_GetRegionById", new { RegionId = regionId });
 
-                    var region = dbConnection
-                        .QuerySingleOrDefault<Region>("SELECT * FROM Region WHERE RegionId = @RegionId", new { RegionId = regionId });
-
-                    if (region == null)
-                    {
-                        var regionHolidays = bankHolidayRepository.LoadBankHolidaysFromAPI().Result;
-                        var distinctRegions = regionHolidays.Select(bh => bh.Region).Distinct();
-
-                        const string regionSql = @"INSERT INTO Region (RegionName, Description)
-                                                   VALUES (@RegionName, @Description)";
-                        foreach (var distinctRegion in distinctRegions)
+                        if (region == null)
                         {
-                            dbConnection.Execute(regionSql, new { RegionName = distinctRegion, Description = "Some description" });
+                            var regionHolidays = bankHolidayRepository.LoadBankHolidaysFromAPI().Result;
+                            var distinctRegions = regionHolidays.Select(bh => bh.Region).Distinct();
+
+                            const string insertRegionSql = "InsertRegion";
+                            const string mapRegionsSql = "spt_RegionsWithBankHolidays";
+
+                            foreach (var distinctRegion in distinctRegions)
+                            {
+                                dbConnection.Execute(insertRegionSql, new { Name = distinctRegion, Description = "Some description" }, commandType: CommandType.StoredProcedure);
+                            }
+
+                            var regionsTable = new DataTable();
+                            regionsTable.Columns.Add("Item", typeof(string));
+                            foreach (var distinctRegion in distinctRegions)
+                            {
+                                regionsTable.Rows.Add(distinctRegion);
+                            }
+
+                            dbConnection.Execute(mapRegionsSql, new { RegionId = regionId, Regions = regionsTable.AsTableValuedParameter("dbo.StringList") }, commandType: CommandType.StoredProcedure);
                         }
-                        const string mappingSql = @"INSERT INTO RegionBankHolidays (RegionId, HolidayId)
-                                                    SELECT @RegionId, Id FROM Holidays
-                                                    WHERE Region IN @Regions";
-                        dbConnection.Execute(mappingSql, new { RegionId = regionId, Regions = distinctRegions });
                     }
 
                     transaction.Commit();
@@ -97,25 +99,35 @@ namespace DataLayer.Repositories
             }
         }
 
+
         public IEnumerable<BankHoliday> GetBankHolidaysForRegion(int regionId)
         {
-            const string sql = "SELECT * FROM RegionBankHolidays WHERE RegionId = @RegionId";
-            return dbConnection.Query<BankHoliday>(sql, new { RegionId = regionId });
+            const string sql = "spt_GetBankHolidaysForRegion";
+            var parameters = new { RegionId = regionId };
+            return dbConnection.Query<BankHoliday>(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
         public void UpdateBankHolidaysForRegion(int regionId, IEnumerable<BankHoliday> bankHolidays)
         {
+            const string sql = "spt_UpdateBankHolidaysForRegion";
 
-            const string deleteSql = "DELETE FROM RegionBankHolidays WHERE RegionId = @RegionId";
-            dbConnection.Execute(deleteSql, new { RegionId = regionId });
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("HolidayId", typeof(int));
+            foreach (var bh in bankHolidays)
+            {
+                dataTable.Rows.Add(bh.HolidayId);
+            }
 
-            SaveBankHolidaysForRegion(regionId, bankHolidays);
+            var parameters = new { RegionId = regionId, BankHolidays = dataTable.AsTableValuedParameter("dbo.BankHolidayType") };
+
+            dbConnection.Execute(sql, parameters, commandType: CommandType.StoredProcedure);
         }
 
         public void DeleteRegion(int regionId)
         {
-            const string sql = "DELETE FROM Regions WHERE Id = @Id";
-            dbConnection.Execute(sql, new { Id = regionId });
+            const string sql = "spt_DeleteRegion";
+            var parameters = new { RegionId = regionId };
+            dbConnection.Execute(sql, parameters, commandType: CommandType.StoredProcedure);
         }
     }
 }

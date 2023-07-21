@@ -23,7 +23,7 @@ namespace DataLayer.Repositories
         {
             try
             {
-                const string sql = "SELECT * FROM Navigation";
+                const string sql = "spt_GetAllNavigations";
                 return dbConnection.Query<Navigation>(sql);
             }
             catch (Exception ex)

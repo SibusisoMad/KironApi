@@ -83,7 +83,7 @@ namespace KironApi.Services
                     var regionHolidays = bankHolidayRepository.LoadBankHolidaysFromAPI().Result;
                     var distinctRegions = regionHolidays.Select(bh => bh.Region).Distinct();
 
-                    const string regionSql = @"INSERT INTO Regions (Name) VALUES (@Name)";
+                    const string regionSql = "spt_InsertRegions";
                     foreach (var distinctRegion in distinctRegions)
                     {
                         regionRepository.SaveRegion(new Region { Name = distinctRegion });

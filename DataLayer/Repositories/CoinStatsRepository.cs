@@ -24,8 +24,7 @@ namespace DataLayer.Repositories
 
         public void SaveCoinStats(CoinStats coinStats)
         {
-            const string sql = @"INSERT INTO CoinStats (CoinName, Price, MarketCap) 
-                                 VALUES (@CoinName, @Price, @MarketCap)";
+            const string sql = "dbo.spt_SaveCoinStats";
             dbConnection.Execute(sql, coinStats);
 
             memoryCache.Remove("CoinStatsData");
@@ -35,7 +34,7 @@ namespace DataLayer.Repositories
         {
             if (!memoryCache.TryGetValue("CoinStatsData", out CoinStats coinStatsData))
             {
-                const string sql = "SELECT TOP 1 * FROM CoinStats";
+                const string sql = "spt_GetCachedCoinStats";
                 coinStatsData = dbConnection.QueryFirstOrDefault<CoinStats>(sql);
 
                 if (coinStatsData != null)
