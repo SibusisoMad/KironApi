@@ -14,7 +14,7 @@ namespace KironApi.Services
             this.logger = logger;
         }
 
-        public async Task<IEnumerable<BankHoliday>> GetBankHolidays()
+        public async Task<IEnumerable<BankHoliday>> GetBankHoliday()
         {
             try
             {
@@ -29,6 +29,29 @@ namespace KironApi.Services
                     new BankHoliday { HolidayName = "Error", HolidayDate = DateTime.Now, Region = "Error" }
                 };
             }
+        }
+
+        public async Task<IEnumerable<BankHoliday>> GetHolidaysWithRegions()
+        {
+            try
+            {
+                return await bankHolidayRepository.GetHolidaysWithRegions();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while retrieving holidays with regions");
+
+                return new List<BankHoliday>
+                {
+                    new BankHoliday { HolidayName = "Error", HolidayDate = DateTime.Now, Region = "Error" }
+                };
+            }
+        }
+
+        public async Task UpdateBankHolidaysFromAPI()
+        {
+            var bankHolidays = await bankHolidayRepository.GetBankHolidays();
+
         }
     }
 }

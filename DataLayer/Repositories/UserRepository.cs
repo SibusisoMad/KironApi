@@ -54,12 +54,12 @@ namespace DataLayer.Repositories
             }
         }
 
-        public async Task<string> GetHashedPasswordByUsername(string username)
+        public async Task<byte[]> GetHashedPasswordByUsername(string username)
         {
             try
             {
                 const string sql = "SELECT PasswordHash FROM Users WHERE Username = @Username";
-                return await dbConnection.QuerySingleOrDefaultAsync<string>(sql, new { Username = username });
+                return await dbConnection.QuerySingleOrDefaultAsync<byte[]>(sql, new { Username = username });
             }
             catch (Exception ex)
             {
@@ -78,6 +78,20 @@ namespace DataLayer.Repositories
                 byte[] hashBytes = sha256.ComputeHash(passwordBytes);
 
                 return hashBytes;
+            }
+        }
+
+        public async Task<byte[]> GetHashedPasswordByUsernameAsync(string username)
+        {
+            try
+            {
+                const string sql = "SELECT PasswordHash FROM Users WHERE Username = @Username";
+                return await dbConnection.QuerySingleOrDefaultAsync<byte[]>(sql, new { Username = username });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while retrieving hashed password");
+                throw;
             }
         }
 

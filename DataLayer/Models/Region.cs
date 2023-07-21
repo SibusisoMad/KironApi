@@ -10,6 +10,6 @@ namespace DataLayer.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public List<BankHoliday> BankHolidays { get; set; }
+        public List<HolidayRegion> HolidayRegions { get; set; }
     }
 }

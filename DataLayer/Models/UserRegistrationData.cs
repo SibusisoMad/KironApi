@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class UserRegistrationModel
+    public class UserRegistrationData
     {
-        public UserRegistrationData Model { get; set; }
+        public User User { get; set; }
+        public string Password { get; set; }
     }
 }

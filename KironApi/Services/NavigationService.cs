@@ -26,7 +26,7 @@ namespace KironApi.Services
                 var navigations = navigationRepository.GetAllNavigations();
                 var navigationTree = new List<NavigationDto>();
 
-                var parentToChildrenMap = navigations.GroupBy(n => n.ParentId)
+                var parentToChildrenMap = navigations.GroupBy(n => n.ParentID)
                                                      .ToDictionary(g => g.Key, g => g.ToList());
 
                 if (parentToChildrenMap.TryGetValue(-1, out var rootNavigations))
@@ -35,8 +35,8 @@ namespace KironApi.Services
                     {
                         var navigationNode = new NavigationDto
                         {
-                            Text = rootNav.NavText,
-                            Children = GetChildNavigationNodes(rootNav.Id, parentToChildrenMap)
+                            Text = rootNav.Text,
+                            Children = GetChildNavigationNodes(rootNav.ID, parentToChildrenMap)
                         };
 
                         navigationTree.Add(navigationNode);
@@ -62,8 +62,8 @@ namespace KironApi.Services
                 {
                     var childNode = new NavigationDto
                     {
-                        Text = childNav.NavText,
-                        Children = GetChildNavigationNodes(childNav.Id, parentToChildrenMap)
+                        Text = childNav.Text,
+                        Children = GetChildNavigationNodes(childNav.ID, parentToChildrenMap)
                     };
 
                     childNodes.Add(childNode);

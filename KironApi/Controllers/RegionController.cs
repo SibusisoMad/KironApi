@@ -88,6 +88,21 @@ namespace KironApi.Controllers
             }
         }
 
+        [HttpGet("region")]
+        public IActionResult CreateRegions()
+        {
+            try
+            {
+                regionService.CreateRegions();
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while creating regions");
+                return StatusCode(500, "An error occurred while creating regions.");
+            }
+        }
+
         [HttpPut("{id}")]
         public IActionResult UpdateRegion(int id, Region region)
         {

@@ -8,9 +8,12 @@ namespace DataLayer.Models
 {
     public class BankHoliday
     {
+        public int HolidayId { get; set; }
         public DateTime HolidayDate { get; set; }
         public string HolidayName { get; set; }
 
         public string Region { get; set; }
+
+        public ICollection<HolidayRegion> HolidayRegions { get; set; }
     }
 }

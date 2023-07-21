@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace KironApi.Services
@@ -25,14 +26,19 @@ namespace KironApi.Services
         {
             try
             {
-                
-                var hashedPassword = await userRepository.GetHashedPasswordByUsername(username);
+                var hashedPasswordBytes = await userRepository.GetHashedPasswordByUsername(username);
 
-               
-                if (PasswordVerification(password, hashedPassword))
+                byte[] inputPasswordBytes = Encoding.UTF8.GetBytes(password);
+
+                using (var sha256 = SHA256.Create())
                 {
-                   
-                    return GenerateJwtToken(username);
+                    byte[] hashedInputPasswordBytes = sha256.ComputeHash(inputPasswordBytes);
+
+                    
+                    if (hashedPasswordBytes.SequenceEqual(hashedInputPasswordBytes))
+                    {
+                        return GenerateJwtToken(username);
+                    }
                 }
 
                 return null;
@@ -44,11 +50,12 @@ namespace KironApi.Services
             }
         }
 
+
         private string GenerateJwtToken(string username)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(secretKey);
-
+            var keyBytes = Convert.FromBase64String(secretKey);
+            int tokenExpiryHours = 24;
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[]
@@ -56,11 +63,25 @@ namespace KironApi.Services
                     new Claim(ClaimTypes.Name, username)
                 }),
                 Expires = DateTime.UtcNow.AddHours(tokenExpiryHours),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(keyBytes), SecurityAlgorithms.HmacSha256Signature)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+
+        public async Task<byte[]> GetHashedPasswordAsync(string username)
+        {
+            try
+            {
+                return await userRepository.GetHashedPasswordByUsernameAsync(username);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while retrieving hashed password");
+                throw;
+            }
         }
 
         private bool PasswordVerification(string inputPassword, string hashedPassword)

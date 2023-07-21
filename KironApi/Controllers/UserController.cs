@@ -24,21 +24,21 @@ namespace KironApi.Controllers
         }
 
         [HttpPost("register")]
-        public IActionResult RegisterUser([FromBody] UserRegistrationModel model )
+        public async Task<IActionResult> RegisterUser([FromBody] UserRegistrationModel model)
         {
             try
             {
-                if (model.User == null || string.IsNullOrEmpty(model.Password))
+                if (model?.Model?.User == null || string.IsNullOrEmpty(model.Model.Password))
                 {
                     return BadRequest("Invalid user registration data");
                 }
 
-                byte[] hashedPassword = GetHashedPassword(model.Password);
-                model.User.PasswordHash = hashedPassword;
+                byte[] hashedPassword = HashPassword(model.Model.Password);
+                model.Model.User.PasswordHash = hashedPassword;
 
-                bool isUserCreated = userRepository.CreateUser(model.User, model.Password);
+                bool isUserCreated = userRepository.CreateUser(model.Model.User, model.Model.Password);
 
-                if (!isUserCreated)
+                if (isUserCreated)
                 {
                     return Ok("User registered successfully");
                 }
@@ -53,6 +53,8 @@ namespace KironApi.Controllers
                 return StatusCode(500, "An error occurred while registering user");
             }
         }
+
+
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
@@ -84,6 +86,12 @@ namespace KironApi.Controllers
         }
 
         private byte[] GetHashedPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            return sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        }
+
+        private byte[] HashPassword(string password)
         {
             using var sha256 = SHA256.Create();
             return sha256.ComputeHash(Encoding.UTF8.GetBytes(password));

@@ -22,13 +22,28 @@ namespace KironApi.Controllers
         {
             try
             {
-                var bankHolidays = await bankHolidayService.GetBankHolidays();
+                var bankHolidays = bankHolidayService.UpdateBankHolidaysFromAPI();
                 return Ok(bankHolidays);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occurred while retrieving bank holidays");
                 return StatusCode(500, new { Error = "An error occurred while retrieving bank holidays." });
+            }
+        }
+
+        [HttpGet("withregions")]
+        public async Task<IActionResult> GetHolidaysWithRegions()
+        {
+            try
+            {
+                var bankHolidays = await bankHolidayService.GetHolidaysWithRegions();
+                return Ok(bankHolidays);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while retrieving holidays with regions");
+                return StatusCode(500, new { Error = "An error occurred while retrieving holidays with regions." });
             }
         }
     }

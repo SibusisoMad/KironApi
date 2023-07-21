@@ -10,11 +10,13 @@ namespace KironApi.Services
     {
         private readonly RegionRepository regionRepository;
         private readonly ILogger logger;
+        private readonly BankHolidayRepository bankHolidayRepository;
 
-        public RegionService(RegionRepository regionRepository, ILogger<RegionService> logger)
+        public RegionService(RegionRepository regionRepository, ILogger<RegionService> logger, BankHolidayRepository bankHolidayRepository)
         {
             this.regionRepository = regionRepository;
             this.logger = logger;
+            this.bankHolidayRepository = bankHolidayRepository;
         }
 
         public IEnumerable<Region> GetAllRegions()
@@ -68,6 +70,29 @@ namespace KironApi.Services
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occurred while creating region");
+                throw;
+            }
+        }
+        public void CreateRegions()
+        {
+            try
+            {
+                var allRegions = regionRepository.GetAllRegions();
+                if (!allRegions.Any())
+                {
+                    var regionHolidays = bankHolidayRepository.LoadBankHolidaysFromAPI().Result;
+                    var distinctRegions = regionHolidays.Select(bh => bh.Region).Distinct();
+
+                    const string regionSql = @"INSERT INTO Regions (Name) VALUES (@Name)";
+                    foreach (var distinctRegion in distinctRegions)
+                    {
+                        regionRepository.SaveRegion(new Region { Name = distinctRegion });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error occurred while creating regions");
                 throw;
             }
         }

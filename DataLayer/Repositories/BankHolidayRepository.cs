@@ -32,9 +32,58 @@ namespace DataLayer.Repositories
             httpClient.DefaultRequestHeaders.Add("User-Agent", "MinimalTrafficClient");
         }
 
+        public async Task<IEnumerable<BankHoliday>> GetHolidaysWithRegions()
+        {
+            const string sql = @"
+                SELECT * 
+                FROM Holidays h
+                LEFT JOIN HolidayRegion hr ON h.HolidayId = hr.HolidayId
+                LEFT JOIN Regions r ON hr.RegionId = r.RegionId";
+
+            var holidaysWithRegions = new Dictionary<int, BankHoliday>();
+
+            using (var connection = dbConnectionManager.GetConnection())
+            {
+                try
+                {
+                    connection.Open();
+
+                    var result = await connection.QueryAsync<BankHoliday, HolidayRegion, Region, BankHoliday>(
+                        sql,
+                        (bankHoliday, holidayRegion, region) =>
+                        {
+                            if (!holidaysWithRegions.TryGetValue(bankHoliday.HolidayId, out var holidayEntry))
+                            {
+                                holidayEntry = bankHoliday;
+                                holidayEntry.HolidayRegions = new List<HolidayRegion>();
+                                holidaysWithRegions.Add(bankHoliday.HolidayId, holidayEntry);
+                            }
+
+                            if (holidayRegion != null && region != null)
+                            {
+                                holidayRegion.Region = region;
+                                holidayEntry.HolidayRegions.Add(holidayRegion);
+                            }
+
+                            return holidayEntry;
+                        },
+                        splitOn: "HolidayRegionId, RegionId"
+                    );
+
+                    return result.Distinct();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error occurred while retrieving holidays with regions");
+                    return Enumerable.Empty<BankHoliday>();
+                }
+            }
+        }
+
         public async Task<IEnumerable<BankHoliday>> GetBankHolidays()
         {
             var cacheKey = "BankHolidaysCache";
+
             if (!memoryCache.TryGetValue(cacheKey, out IEnumerable<BankHoliday> bankHolidays))
             {
                 bankHolidays = await LoadBankHolidaysFromDatabase();
@@ -73,7 +122,7 @@ namespace DataLayer.Repositories
             return null;
         }
 
-        private async Task<IEnumerable<BankHoliday>> LoadBankHolidaysFromAPI()
+        public async Task<IEnumerable<BankHoliday>> LoadBankHolidaysFromAPI()
         {
             try
             {
@@ -93,28 +142,22 @@ namespace DataLayer.Repositories
                 var bankHolidayData = JsonSerializer.Deserialize<Dictionary<string, BankHolidayData>>(content, options);
 
                 var bankHolidays = new List<BankHoliday>();
-                foreach (var division in bankHolidayData )
+                foreach (var division in bankHolidayData)
                 {
                     foreach (var eventItem in division.Value.Events)
                     {
-                        if (DateTime.TryParse(division.Key, out DateTime date))
+                        var bankHoliday = new BankHoliday
                         {
-                            var bankHoliday = new BankHoliday
-                            {
-                                HolidayName = eventItem,
-                                HolidayDate = date,
-                                Region = division.Value.Division
-                            };
-                            bankHolidays.Add(bankHoliday);
-                        }
-                        else
-                        {
-                            logger.LogWarning($"Invalid date format: {division.Key}");
-                        }
+                            HolidayName = eventItem.Title,
+                            HolidayDate = eventItem.Date,
+                            Region = division.Value.Division
+                        };
+                        bankHolidays.Add(bankHoliday);
                     }
                 }
 
                 return bankHolidays;
+
             }
             catch (Exception ex)
             {
@@ -123,7 +166,7 @@ namespace DataLayer.Repositories
             }
         }
 
-        private async Task SaveBankHolidaysToDatabase(IEnumerable<BankHoliday> bankHolidays)
+        public async Task SaveBankHolidaysToDatabase(IEnumerable<BankHoliday> bankHolidays)
         {
             using (var connection = dbConnectionManager.GetConnection())
             {
@@ -133,16 +176,24 @@ namespace DataLayer.Repositories
 
                     foreach (var bankHoliday in bankHolidays)
                     {
-                        var query = "INSERT INTO BankHolidays (Name, Date, Region) VALUES (@Name, @Date, @Region)";
-                        await connection.ExecuteAsync(query, bankHoliday);
+                        var query = "INSERT INTO Holidays (Name, Date, Region) VALUES (@Name, @Date, @Region)";
+
+                        await connection.ExecuteAsync(query, new
+                        {
+                            Name = bankHoliday.HolidayName,
+                            Date = bankHoliday.HolidayDate,
+                            Region = bankHoliday.Region
+                        });
                     }
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error occurred while saving bank holidays to the database");
-                    throw; 
+                    throw;
                 }
             }
         }
+
+
     }
 }
